@@ -1,11 +1,17 @@
 from pyspark.sql import SparkSession
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 from routes import router
 from kink import di
 import pathlib
 import os
 
 app = FastAPI()
+
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"]
+)
 
 
 @app.on_event("startup")
