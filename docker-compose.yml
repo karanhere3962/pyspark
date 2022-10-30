@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+  fastapi-pyspark-server:
+    build: .
+    restart: unless-stopped
+    environment:
+      - STAGE=dev
+    ports:
+      - 6000:6000
+    volumes:
+      - .:/app
