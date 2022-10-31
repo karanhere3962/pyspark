@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+from utils.helpers import generate_mock_data, load_csv_filenames
 from routes import router
 from kink import di
 import pathlib
@@ -18,12 +19,12 @@ app.add_middleware(
 def init_app():
     di["BASE_DIR"] = os.path.dirname(__file__)
     di["CSV_FOLDER_PATH"] = os.path.join(di["BASE_DIR"], "csv_files")
-    di["CSV_FILENAMES_DICT"] = {
-        pathlib.Path(str(filename).lower()).stem: os.path.basename(str(filename))
-        for filename in list(pathlib.Path(di["CSV_FOLDER_PATH"]).glob(r"*.csv"))
-    }
     di["LOADED_VIEWS"] = {}
     di["SPARK_SESSION"] = SparkSession.builder.appName("SparkApp").getOrCreate()
+    print("Generating mock data.")
+    generate_mock_data()
+    print("Completed generating data.")
+    load_csv_filenames()
 
 
 app.include_router(router)

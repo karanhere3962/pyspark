@@ -3,8 +3,8 @@ from fastapi.responses import JSONResponse, Response
 from utils.helpers import get_header_details, load_csv_to_spark_session
 from schemas import SQLAPISchema
 from kink import di
-import os
-import json
+from pyspark.sql.window import Window
+from pyspark.sql.functions import row_number, lit
 
 
 router = APIRouter()
@@ -15,10 +15,24 @@ def run_sql_query(query_details: SQLAPISchema):
     spark_session = di["SPARK_SESSION"]
     with load_csv_to_spark_session(sql_query=query_details.sql_query) as loaded_views:
         df = spark_session.sql(query_details.sql_query)
-        result = df.rdd.map(lambda row: row.asDict()).collect()
-        return JSONResponse(
-            content=result[query_details.offset : min(len(result), query_details.limit)]
+        df = df.withColumn("index", row_number().over(Window().orderBy(lit("A"))))
+        # result = []
+        # df = df.rdd.zipWithIndex().toDF()
+        # for row in df.rdd.toLocalIterator():
+        #     if row._2 < query_details.offset:
+        #         continue
+        #     if row._2 >= query_details.limit:
+        #         break
+        #     result.append(row._1.asDict())
+        result = (
+            df.filter(
+                (df.index - 1 >= query_details.offset)
+                & (df.index - 1 < query_details.limit)
+            )
+            .rdd.map(lambda row: row.asDict())
+            .collect()
         )
+        return JSONResponse(content=result)
 
 
 @router.post("/get-table-details")
