@@ -15,30 +15,33 @@ def run_sql_query(query_details: SQLAPISchema):
     spark_session = di["SPARK_SESSION"]
     with load_csv_to_spark_session(sql_query=query_details.sql_query) as loaded_views:
 
-        try:
-            df = spark_session.sql(query_details.sql_query)
-            df = df.withColumn("index", row_number().over(Window().orderBy(lit("A"))))
-            # result = []
-            # df = df.rdd.zipWithIndex().toDF()
-            # for row in df.rdd.toLocalIterator():
-            #     if row._2 < query_details.offset:
-            #         continue
-            #     if row._2 >= query_details.limit:
-            #         break
-            #     result.append(row._1.asDict())
-            result = (
-                df.filter(
-                    (df.index - 1 >= query_details.offset)
-                    & (df.index - 1 < query_details.limit)
-                )
-                .select([column for column in df.columns if column not in {"index"}])
-                .rdd.map(lambda row: row.asDict())
-                .collect()
+        # try:
+        df = spark_session.sql(query_details.sql_query)
+        df = df.withColumn("index", row_number().over(Window().orderBy(lit("A"))))
+        # result = []
+        # df = df.rdd.zipWithIndex().toDF()
+        # for row in df.rdd.toLocalIterator():
+        #     if row._2 < query_details.offset:
+        #         continue
+        #     if row._2 >= query_details.limit:
+        #         break
+        #     result.append(row._1.asDict())
+        result = (
+            df.filter(
+                (df.index - 1 >= query_details.offset)
+                & (df.index - 1 < query_details.limit)
             )
-        except sputils.AnalysisException as e:
-            return Response(str(e), status_code=400)
-        except Exception as e:
-            return Response(str(e), status_code=500)
+            .drop("index")
+            # .select([column for column in df.columns if column not in {"index"}])
+            .rdd.map(lambda row: row.asDict())
+            .collect()
+        )
+        # except sputils.AnalysisException as e:
+        #     raise e
+        #     return Response(str(e), status_code=400)
+        # except Exception as e:
+        #     print(e)
+        #     return Response(str(e), status_code=500)
         return JSONResponse(content=result)
 
 
